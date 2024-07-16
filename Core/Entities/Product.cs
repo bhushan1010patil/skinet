@@ -1,6 +1,4 @@
-using Core.Entities;
-
-namespace core.Entities
+namespace Core.Entities
 {
     #pragma warning disable CS8618
     public class Product : BaseEntity

@@ -1,6 +1,6 @@
 using API.Dtos;
 using AutoMapper;
-using core.Entities;
+using Core.Entities;
 
 namespace API.Helpers;
 public class MappingProfiles : Profile

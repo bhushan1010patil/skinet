@@ -1,5 +1,3 @@
-using SQLitePCL;
-
 namespace API.Errors;
 public class ApiResponse
 {

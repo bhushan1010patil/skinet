@@ -1,8 +1,8 @@
 
 using API.Dtos;
 using API.Errors;
+using API.Helpers;
 using AutoMapper;
-using core.Entities;
 using Core.Entities;
 using Core.Interfaces;
 using Core.Specifications;
@@ -30,14 +30,31 @@ namespace API.Controller
             _mapper = mapper;
         }
 
-        [HttpGet]
-        [Route("GetProducts")]
-        public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts(string sort, int? brandId, int? typeId)
+         [HttpGet]
+        public async Task<ActionResult<Pagination<ProductToReturnDto>>> GetProducts(
+            [FromQuery] ProductSpecParams productParams)
         {
-            var spec = new ProductsWithTypesAndBrandsSpecification(sort, brandId, typeId);
+            var spec = new ProductsWithTypesAndBrandsSpecification(productParams);
+            var countSpec = new ProductsWithFiltersForCountSpecification(productParams);
+
+            var totalItems = await _productRepo.CountAsync(countSpec);
             var products = await _productRepo.ListAsync(spec);
-            return Ok(_mapper.Map<IReadOnlyList<Product>,IReadOnlyList<ProductToReturnDto>>(products));
+
+            var data = _mapper.Map<IReadOnlyList<ProductToReturnDto>>(products);
+
+            return Ok(new Pagination<ProductToReturnDto>(productParams.PageIndex,
+                productParams.PageSize, totalItems, data));
         }
+
+
+        // [HttpGet]
+        // [Route("GetProducts")]
+        // public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts(string sort, int? brandId, int? typeId)
+        // {
+        //     var spec = new ProductsWithTypesAndBrandsSpecification(sort, brandId, typeId);
+        //     var products = await _productRepo.ListAsync(spec);
+        //     return Ok(_mapper.Map<IReadOnlyList<Product>,IReadOnlyList<ProductToReturnDto>>(products));
+        // }
 
         [HttpGet]
         [Route("Product/{id}")]

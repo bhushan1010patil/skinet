@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Data;
 public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
 {
-    #pragma warning disable CS8603
+#pragma warning disable CS8603
     private readonly StoreContext _context;
     public GenericRepository(StoreContext context)
     {
@@ -19,7 +19,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
         return await _context.Set<T>().FindAsync(id);
     }
 
-    
+
 
     public async Task<IReadOnlyList<T>> ListAllAsync()
     {
@@ -39,5 +39,10 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     private IQueryable<T> ApplySpecification(ISpecification<T> spec)
     {
         return SpecificationEvaluator<T>.GetQuery(_context.Set<T>().AsQueryable(), spec);
+    }
+
+    public async Task<int> CountAsync(ISpecification<T> spec)
+    {
+        return await ApplySpecification(spec).CountAsync();
     }
 }
