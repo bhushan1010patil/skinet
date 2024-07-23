@@ -3,7 +3,7 @@ import { IProduct } from "./product"
 export class IPagination{
     pageIndex: number
     pageSize: number
-    pageCount: number
+    count: number
     data: IProduct[]
 }
 
