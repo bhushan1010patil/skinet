@@ -25,11 +25,13 @@
     "bootswatch": "^5.3.3",
     "express": "^4.18.2",
     "font-awesome": "^4.7.0",
+    "localstorage-polyfill": "^1.0.1",
     "ngx-bootstrap": "^12.0.0",
     "ngx-spinner": "^17.0.0",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "uuid": "^10.0.0",
     "xng-breadcrumb": "^11.0.0",
     "zone.js": "~0.14.3"
   },
