@@ -1,12 +1,19 @@
 
+using System.Text;
 using API.Errors;
 using API.Helpers;
 using API.Middleware;
+using Core.Entities.Identity;
 using Core.interfaces;
 using Core.Interfaces;
 using Infrastructure.Data;
+using Infrastructure.Identity;
+using Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 
 #pragma warning disable CS8602
@@ -18,15 +25,18 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<StoreContext>(x => x.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddDbContext<AppIdentityDbContext>(x => {
+    x.UseSqlite(builder.Configuration.GetConnectionString("IdentityConnection"));
+});
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(c =>
 {
     var configuration = ConfigurationOptions.Parse(builder.Configuration.GetConnectionString("RedisConnection"), true);
     return ConnectionMultiplexer.Connect(configuration);
 });
 
-// var redisConnection = builder.Configuration.GetConnectionString("RedisConnection");
-// builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnection));
-
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IBasketRepository, BasketRepository>();
@@ -44,6 +54,24 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         return new BadRequestObjectResult(errorResponse);
     };
 });
+
+
+/*Add Identity Serivices*/
+var b = builder.Services.AddIdentityCore<AppUser>();
+b = new IdentityBuilder(b.UserType, b.Services);
+b.AddEntityFrameworkStores<AppIdentityDbContext>();
+b.AddSignInManager<SignInManager<AppUser>>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Token:Key"])),
+        ValidIssuer = builder.Configuration["Token:Issuer"],
+        ValidateIssuer = true,
+        ValidateAudience = false
+    };
+});
+
 
 builder.Services.AddCors(option =>
 {
@@ -63,9 +91,16 @@ try
         var loggerFactory = services.GetRequiredService<ILoggerFactory>();
         try
         {
+            //Data migration in skinet.db
             var context = services.GetRequiredService<StoreContext>();
             await context.Database.MigrateAsync();
             await StoreContextSeed.SeedAsync(context, loggerFactory);
+
+            //Data migration in identity.db
+            var userManager = services.GetRequiredService<UserManager<AppUser>>();
+            var identityContext = services.GetRequiredService<AppIdentityDbContext>();
+            await identityContext.Database.MigrateAsync();
+            await AppIdentityDbContextSeed.SeedUsersAsync(userManager);
         }
         catch (Exception ex)
         {
@@ -86,6 +121,7 @@ try
     app.UseHttpsRedirection();
     app.UseStaticFiles();
     app.UseCors("CorsPolicy");
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
     app.Run();
